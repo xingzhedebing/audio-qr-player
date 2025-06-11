@@ -2,268 +2,169 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <meta name="format-detection" content="telephone=no">
-    <title>音频播放</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音频播放器</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', STHeiti, 'Microsoft Yahei', Tahoma, Simsun, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
             min-height: 100vh;
-            padding: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
+            padding: 20px;
         }
 
-        .player-card {
+        .container {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
             padding: 30px;
             max-width: 400px;
             width: 100%;
             text-align: center;
-            position: relative;
-            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
         }
 
-        .player-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4, #feca57);
-            animation: rainbow 3s linear infinite;
+        .loading {
+            font-size: 18px;
+            color: #666;
+            margin: 20px 0;
         }
 
-        @keyframes rainbow {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-        }
-
-        .music-icon {
-            font-size: 4rem;
-            margin-bottom: 20px;
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+        .error {
+            color: #e74c3c;
+            font-size: 16px;
+            margin: 20px 0;
+            padding: 15px;
+            background: #ffeaa7;
+            border-radius: 10px;
+            border-left: 4px solid #e74c3c;
         }
 
         .song-info {
-            margin-bottom: 30px;
+            margin: 20px 0;
         }
 
         .song-title {
-            font-size: 1.3rem;
-            font-weight: bold;
+            font-size: 20px;
+            font-weight: 600;
             color: #2c3e50;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
             word-break: break-all;
         }
 
-        .song-subtitle {
-            color: #7f8c8d;
-            font-size: 0.9rem;
+        .controls {
+            margin: 30px 0;
         }
 
-        .audio-container {
-            margin: 25px 0;
-            position: relative;
-        }
-
-        .audio-player {
-            width: 100%;
-            height: 50px;
-            border-radius: 25px;
-            background: #f8f9fa;
-            outline: none;
-        }
-
-        .audio-player::-webkit-media-controls-panel {
-            background-color: #f8f9fa;
-            border-radius: 25px;
-        }
-
-        .play-button {
+        .play-btn {
             background: linear-gradient(45deg, #667eea, #764ba2);
             color: white;
             border: none;
             border-radius: 50px;
             padding: 15px 30px;
-            font-size: 1.1rem;
-            font-weight: bold;
+            font-size: 18px;
             cursor: pointer;
-            margin: 15px 0;
-            transition: all 0.3s;
+            transition: all 0.3s ease;
             box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
         }
 
-        .play-button:hover {
+        .play-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 7px 20px rgba(102, 126, 234, 0.4);
         }
 
-        .download-section {
-            margin-top: 25px;
-            padding-top: 20px;
-            border-top: 1px solid #eee;
-        }
-
-        .download-button {
-            background: #27ae60;
+        .download-btn {
+            background: #2ecc71;
             color: white;
             border: none;
-            border-radius: 10px;
-            padding: 12px 25px;
-            font-size: 1rem;
+            border-radius: 25px;
+            padding: 10px 20px;
+            font-size: 14px;
             cursor: pointer;
-            transition: all 0.3s;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .download-button:hover {
-            background: #219a52;
-            transform: translateY(-1px);
-        }
-
-        .tips {
-            margin-top: 20px;
-            padding: 15px;
-            background: rgba(52, 152, 219, 0.1);
-            border-radius: 10px;
-            color: #3498db;
-            font-size: 0.85rem;
-            line-height: 1.4;
-        }
-
-        .loading {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            color: #7f8c8d;
-            padding: 20px;
-        }
-
-        .spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .error {
-            background: #ff6b6b;
-            color: white;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
+            margin-top: 15px;
+            transition: all 0.3s ease;
         }
 
         .debug-info {
-            background: #f8f9fa;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-            padding: 15px;
-            margin-top: 15px;
-            font-size: 0.8rem;
-            color: #666;
+            margin-top: 20px;
             text-align: left;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 12px;
+            color: #666;
             word-break: break-all;
         }
 
-        /* 微信特殊适配 */
-        @media screen and (max-width: 414px) {
-            body {
-                padding: 10px;
-            }
-            
-            .player-card {
-                padding: 20px;
-                border-radius: 15px;
-            }
-            
-            .music-icon {
-                font-size: 3rem;
-            }
-            
-            .song-title {
-                font-size: 1.1rem;
-            }
+        audio {
+            width: 100%;
+            margin: 20px 0;
+            border-radius: 10px;
+        }
+
+        .tip {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #7f8c8d;
+            line-height: 1.6;
         }
     </style>
 </head>
 <body>
-    <div class="player-card">
+    <div class="container">
         <!-- 加载状态 -->
-        <div id="loadingState" class="loading">
-            <div class="spinner"></div>
-            <span>正在加载音频...</span>
+        <div id="loadingState">
+            <div class="loading">🎵</div>
+            <h2>正在加载音频...</h2>
+            <p>请稍候片刻</p>
         </div>
 
         <!-- 错误状态 -->
-        <div id="errorState" class="error" style="display: none;">
-            <strong>加载失败！</strong><br>
-            <span id="errorMessage">音频文件无法访问</span>
+        <div id="errorState" style="display: none;">
+            <div class="error">
+                <strong>⚠️ 加载失败！</strong><br>
+                <span id="errorMessage">音频文件无法访问</span>
+            </div>
             <div id="debugInfo" class="debug-info" style="display: none;">
-                <strong>调试信息：</strong><br>
+                <strong>🔧 调试信息：</strong><br>
                 <div id="debugDetails"></div>
             </div>
         </div>
 
-        <!-- 播放器主体 -->
+        <!-- 播放器内容 -->
         <div id="playerContent" style="display: none;">
-            <div class="music-icon">🎵</div>
-            
             <div class="song-info">
                 <div class="song-title" id="songTitle">音频文件</div>
-                <div class="song-subtitle">点击下方播放按钮开始播放</div>
             </div>
 
-            <div class="audio-container">
-                <audio id="audioPlayer" class="audio-player" controls preload="auto" controlslist="nodownload">
-                    <source id="audioSource" type="audio/mpeg">
-                    您的浏览器不支持音频播放功能
-                </audio>
-            </div>
+            <!-- 音频元素 -->
+            <audio id="audioPlayer" controls preload="metadata" crossorigin="anonymous">
+                <source id="audioSource" type="audio/mpeg">
+                您的浏览器不支持音频播放功能
+            </audio>
 
-            <button id="playButton" class="play-button" onclick="togglePlay()">
-                <span id="playIcon">▶️</span>
-                <span id="playText">点击播放</span>
-            </button>
-
-            <div class="download-section">
-                <button class="download-button" onclick="downloadAudio()">
+            <div class="controls">
+                <button class="play-btn" onclick="togglePlay()">
+                    <span id="playIcon">▶️</span> 
+                    <span id="playText">点击播放</span>
+                </button>
+                <br>
+                <button class="download-btn" onclick="downloadAudio()">
                     📥 下载音频
                 </button>
-                
-                <div class="tips">
-                    💡 提示：在微信中播放音频时，建议佩戴耳机以获得更好的音质体验
-                </div>
+            </div>
+
+            <div class="tip">
+                💡 提示：在微信中播放音频时，建议佩戴耳机以获得更好的音质体验
             </div>
         </div>
     </div>
@@ -283,15 +184,10 @@
         // 解析文件名
         function parseFileName(url) {
             try {
-                const path = decodeURIComponent(url);
-                const parts = path.split('/');
-                const fullFileName = parts[parts.length - 1];
-                
-                // 移除扩展名
-                const nameWithoutExt = fullFileName.replace(/\.[^/.]+$/, "");
-                
-                // 处理特殊字符和编码
-                return nameWithoutExt || '音频文件';
+                const parts = url.split('/');
+                const fullName = parts[parts.length - 1];
+                const decodedName = decodeURIComponent(fullName);
+                return decodedName.replace(/\.(mp3|wav|m4a|flac|aac|ogg)$/i, '');
             } catch (e) {
                 return '音频文件';
             }
@@ -303,83 +199,13 @@
             document.getElementById('debugInfo').style.display = 'block';
         }
 
-        // 初始化播放器
-        function initPlayer() {
-            // 获取音频URL
-            audioUrl = getUrlParam('url');
-            
-            if (!audioUrl) {
-                showError('缺少音频文件参数');
-                return;
-            }
-
-            // 不要解码URL，因为URL已经被正确编码，浏览器会自动处理
-            // 保持URL的原始编码状态
-
-            // 解析文件名
-            fileName = parseFileName(audioUrl);
-            document.getElementById('songTitle').textContent = fileName;
-            document.title = fileName + ' - 音频播放';
-
-            // 设置音频源
-            audioPlayer = document.getElementById('audioPlayer');
-            document.getElementById('audioSource').src = audioUrl;
-
-            // 监听事件
-            audioPlayer.addEventListener('loadeddata', onAudioLoaded);
-            audioPlayer.addEventListener('error', onAudioError);
-            audioPlayer.addEventListener('play', onPlay);
-            audioPlayer.addEventListener('pause', onPause);
-            audioPlayer.addEventListener('ended', onEnded);
-            audioPlayer.addEventListener('loadstart', function() {
-                console.log('开始加载音频');
-            });
-            audioPlayer.addEventListener('canplay', function() {
-                console.log('音频可以播放');
-                clearTimeout(loadTimeout);
-                onAudioLoaded();
-            });
-            audioPlayer.addEventListener('progress', function() {
-                console.log('音频加载中...');
-                // 如果有进度，说明文件在加载
-                if (audioPlayer.buffered.length > 0) {
-                    clearTimeout(loadTimeout);
-                    console.log('检测到音频缓冲，加载正常');
-                }
-            });
-
-            // 设置超时检测 - 延长到20秒，并增加更多检测
-            loadTimeout = setTimeout(() => {
-                if (document.getElementById('loadingState').style.display !== 'none') {
-                    // 检查网络状态和audio状态
-                    let debugInfo = `音频URL: ${audioUrl}<br>文件名: ${fileName}<br>`;
-                    debugInfo += `网络状态: ${navigator.onLine ? '正常' : '离线'}<br>`;
-                    debugInfo += `Audio ReadyState: ${audioPlayer.readyState}<br>`;
-                    debugInfo += `Audio NetworkState: ${audioPlayer.networkState}<br>`;
-                    
-                    if (audioPlayer.error) {
-                        debugInfo += `Audio Error: ${audioPlayer.error.code}<br>`;
-                    }
-                    
-                    // 如果readyState > 0，说明至少开始加载了
-                    if (audioPlayer.readyState > 0) {
-                        debugInfo += `状态: 音频开始加载但未完成<br>`;
-                        showError('音频加载缓慢，请稍等或检查网络');
-                    } else {
-                        debugInfo += `状态: 音频完全无法加载<br>`;
-                        showError('音频加载失败 - 可能的CORS问题');
-                    }
-                    
-                    debugInfo += `超时时间: 20秒<br>`;
-                    debugInfo += `建议: 尝试刷新页面或检查网络连接`;
-                    showDebugInfo(debugInfo);
-                }
-            }, 20000); // 延长到20秒
-
-            // 尝试预加载
-            audioPlayer.load();
-            
-            console.log('音频播放器初始化完成，等待加载...');
+        // 显示错误
+        function showError(message) {
+            clearTimeout(loadTimeout);
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('playerContent').style.display = 'none';
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('errorState').style.display = 'block';
         }
 
         // 音频加载完成
@@ -387,13 +213,7 @@
             clearTimeout(loadTimeout);
             document.getElementById('loadingState').style.display = 'none';
             document.getElementById('playerContent').style.display = 'block';
-            
-            // 在微信中尝试自动播放（通常会被阻止）
-            setTimeout(() => {
-                audioPlayer.play().catch(() => {
-                    console.log('自动播放被阻止，需要用户手动播放');
-                });
-            }, 500);
+            console.log('音频加载成功！');
         }
 
         // 音频加载错误
@@ -401,29 +221,28 @@
             clearTimeout(loadTimeout);
             const error = audioPlayer.error;
             let errorMsg = '音频文件加载失败';
-            let debugMsg = `URL: ${audioUrl}<br>文件名: ${fileName}`;
+            let debugMsg = `URL: ${audioUrl}<br>文件名: ${fileName}<br>`;
             
             if (error) {
                 switch (error.code) {
                     case error.MEDIA_ERR_ABORTED:
-                        errorMsg += '：播放被中断';
-                        debugMsg += '<br>错误代码: MEDIA_ERR_ABORTED';
+                        errorMsg = '音频播放被中断';
+                        debugMsg += 'Error: MEDIA_ERR_ABORTED';
                         break;
                     case error.MEDIA_ERR_NETWORK:
-                        errorMsg += '：网络错误';
-                        debugMsg += '<br>错误代码: MEDIA_ERR_NETWORK';
+                        errorMsg = '网络错误，无法加载音频';
+                        debugMsg += 'Error: MEDIA_ERR_NETWORK';
                         break;
                     case error.MEDIA_ERR_DECODE:
-                        errorMsg += '：音频解码失败';
-                        debugMsg += '<br>错误代码: MEDIA_ERR_DECODE';
+                        errorMsg = '音频文件损坏或格式不支持';
+                        debugMsg += 'Error: MEDIA_ERR_DECODE';
                         break;
                     case error.MEDIA_ERR_SRC_NOT_SUPPORTED:
-                        errorMsg += '：音频格式不支持';
-                        debugMsg += '<br>错误代码: MEDIA_ERR_SRC_NOT_SUPPORTED';
+                        errorMsg = '音频格式不支持或文件不存在';
+                        debugMsg += 'Error: MEDIA_ERR_SRC_NOT_SUPPORTED';
                         break;
                     default:
-                        errorMsg += '：未知错误';
-                        debugMsg += '<br>错误代码: ' + error.code;
+                        debugMsg += 'Error: 未知错误 ' + error.code;
                         break;
                 }
             }
@@ -432,31 +251,20 @@
             showDebugInfo(debugMsg);
         }
 
-        // 播放开始
+        // 播放状态变化
         function onPlay() {
             document.getElementById('playIcon').textContent = '⏸️';
             document.getElementById('playText').textContent = '暂停';
         }
 
-        // 播放暂停
         function onPause() {
             document.getElementById('playIcon').textContent = '▶️';
             document.getElementById('playText').textContent = '播放';
         }
 
-        // 播放结束
         function onEnded() {
             document.getElementById('playIcon').textContent = '🔄';
             document.getElementById('playText').textContent = '重新播放';
-        }
-
-        // 显示错误
-        function showError(message) {
-            clearTimeout(loadTimeout);
-            document.getElementById('loadingState').style.display = 'none';
-            document.getElementById('playerContent').style.display = 'none';
-            document.getElementById('errorMessage').textContent = message;
-            document.getElementById('errorState').style.display = 'block';
         }
 
         // 切换播放状态
@@ -485,26 +293,60 @@
                 link.href = audioUrl;
                 link.download = fileName + '.mp3';
                 link.target = '_blank';
-                
-                // 在微信中，需要用户手动点击
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
             } catch (e) {
-                // 如果下载失败，直接打开链接
                 window.open(audioUrl, '_blank');
             }
         }
 
+        // 初始化播放器
+        function initPlayer() {
+            audioUrl = getUrlParam('url');
+            
+            if (!audioUrl) {
+                showError('缺少音频文件参数');
+                return;
+            }
+
+            fileName = parseFileName(audioUrl);
+            document.getElementById('songTitle').textContent = fileName;
+            document.title = fileName + ' - 音频播放';
+
+            audioPlayer = document.getElementById('audioPlayer');
+            document.getElementById('audioSource').src = audioUrl;
+
+            // 事件监听
+            audioPlayer.addEventListener('loadeddata', onAudioLoaded);
+            audioPlayer.addEventListener('loadedmetadata', onAudioLoaded);
+            audioPlayer.addEventListener('canplay', onAudioLoaded);
+            audioPlayer.addEventListener('error', onAudioError);
+            audioPlayer.addEventListener('play', onPlay);
+            audioPlayer.addEventListener('pause', onPause);
+            audioPlayer.addEventListener('ended', onEnded);
+
+            // 30秒超时
+            loadTimeout = setTimeout(() => {
+                if (document.getElementById('loadingState').style.display !== 'none') {
+                    let debugInfo = `音频URL: ${audioUrl}<br>文件名: ${fileName}<br>`;
+                    debugInfo += `ReadyState: ${audioPlayer.readyState}<br>`;
+                    debugInfo += `NetworkState: ${audioPlayer.networkState}<br>`;
+                    debugInfo += `超时: 30秒<br>`;
+                    debugInfo += `建议: 检查网络连接或尝试刷新页面`;
+                    
+                    showError('音频加载超时');
+                    showDebugInfo(debugInfo);
+                }
+            }, 30000);
+
+            // 开始加载
+            audioPlayer.load();
+            console.log('开始加载音频:', audioUrl);
+        }
+
         // 页面加载完成后初始化
         window.addEventListener('DOMContentLoaded', initPlayer);
-
-        // 防止页面被缓存
-        window.addEventListener('pageshow', function(event) {
-            if (event.persisted) {
-                window.location.reload();
-            }
-        });
     </script>
 </body>
 </html> 
