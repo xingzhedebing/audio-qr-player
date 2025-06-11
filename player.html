@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音频播放器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .player-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .player-header {
+            margin-bottom: 30px;
+        }
+
+        .player-title {
+            font-size: 2rem;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .player-subtitle {
+            color: #7f8c8d;
+            font-size: 1.1rem;
+        }
+
+        .audio-info {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .song-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .song-artist {
+            color: #7f8c8d;
+            font-size: 1rem;
+            margin-bottom: 15px;
+        }
+
+        .audio-player {
+            width: 100%;
+            margin: 20px 0;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #219a52;
+            transform: translateY(-2px);
+        }
+
+        .error-message {
+            background: #ff6b6b;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            color: #7f8c8d;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .audio-wave {
+            height: 60px;
+            background: linear-gradient(90deg, #3498db, #9b59b6, #e74c3c);
+            border-radius: 30px;
+            margin: 20px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .wave-animation {
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: wave 2s infinite;
+        }
+
+        @keyframes wave {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        @media (max-width: 768px) {
+            .player-container {
+                padding: 30px 20px;
+                margin: 10px;
+            }
+
+            .player-title {
+                font-size: 1.5rem;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="player-container">
+        <div class="player-header">
+            <h1 class="player-title">🎵 音频播放器</h1>
+            <p class="player-subtitle">扫码播放，享受音乐</p>
+        </div>
+
+        <div id="loadingState" class="loading">
+            <div class="spinner"></div>
+            <span>正在加载音频...</span>
+        </div>
+
+        <div id="errorState" class="error-message" style="display: none;">
+            <strong>播放失败！</strong><br>
+            <span id="errorMessage">音频文件无法加载，请检查文件是否存在。</span>
+        </div>
+
+        <div id="playerState" style="display: none;">
+            <div class="audio-info">
+                <div class="song-title" id="songTitle">未知歌曲</div>
+                <div class="song-artist" id="songArtist">未知艺术家</div>
+                <div class="audio-wave">
+                    <div class="wave-animation"></div>
+                </div>
+            </div>
+
+            <audio id="audioPlayer" class="audio-player" controls preload="auto">
+                您的浏览器不支持音频播放。
+            </audio>
+
+            <div class="controls">
+                <button class="btn btn-primary" onclick="togglePlay()">
+                    <span id="playButtonText">▶️ 播放</span>
+                </button>
+                <button class="btn btn-success" onclick="downloadAudio()">
+                    📥 下载
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 获取URL参数
+        function getUrlParameter(name) {
+            const params = new URLSearchParams(window.location.search);
+            return params.get(name);
+        }
+
+        // 解析音频文件信息
+        function parseAudioInfo(filename) {
+            // 移除扩展名
+            const nameWithoutExt = filename.replace(/\.[^/.]+$/, "");
+            
+            // 尝试解析格式：001_歌曲名_艺术家
+            const parts = nameWithoutExt.split('_');
+            
+            if (parts.length >= 2) {
+                return {
+                    title: parts[1] || nameWithoutExt,
+                    artist: parts[2] || '未知艺术家'
+                };
+            } else {
+                return {
+                    title: nameWithoutExt,
+                    artist: '未知艺术家'
+                };
+            }
+        }
+
+        // 加载音频
+        async function loadAudio() {
+            try {
+                // 获取音频ID或URL
+                const audioId = getUrlParameter('id');
+                const audioUrl = getUrlParameter('url');
+                
+                let finalUrl = '';
+                let audioInfo = { title: '未知歌曲', artist: '未知艺术家' };
+
+                if (audioUrl) {
+                    // 直接使用URL
+                    finalUrl = decodeURIComponent(audioUrl);
+                    const filename = finalUrl.split('/').pop();
+                    audioInfo = parseAudioInfo(filename);
+                } else if (audioId) {
+                    // 根据ID构建URL（这里需要根据您的实际情况调整）
+                    finalUrl = `https://audio-qr-1361719303.cos.ap-chengdu.myqcloud.com/${audioId}.mp3`;
+                    audioInfo = parseAudioInfo(audioId);
+                } else {
+                    throw new Error('缺少音频参数');
+                }
+
+                // 更新页面信息
+                document.getElementById('songTitle').textContent = audioInfo.title;
+                document.getElementById('songArtist').textContent = audioInfo.artist;
+                document.title = `${audioInfo.title} - 音频播放器`;
+
+                // 设置音频源
+                const audioPlayer = document.getElementById('audioPlayer');
+                audioPlayer.src = finalUrl;
+
+                // 监听音频加载事件
+                audioPlayer.addEventListener('loadeddata', function() {
+                    document.getElementById('loadingState').style.display = 'none';
+                    document.getElementById('playerState').style.display = 'block';
+                });
+
+                audioPlayer.addEventListener('error', function() {
+                    showError('音频文件加载失败，请检查文件是否存在或格式是否支持。');
+                });
+
+                // 监听播放状态
+                audioPlayer.addEventListener('play', function() {
+                    document.getElementById('playButtonText').innerHTML = '⏸️ 暂停';
+                });
+
+                audioPlayer.addEventListener('pause', function() {
+                    document.getElementById('playButtonText').innerHTML = '▶️ 播放';
+                });
+
+                // 尝试自动播放（某些浏览器可能阻止）
+                setTimeout(() => {
+                    audioPlayer.play().catch(() => {
+                        // 自动播放被阻止，用户需要手动播放
+                        console.log('自动播放被阻止');
+                    });
+                }, 1000);
+
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        // 显示错误
+        function showError(message) {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('errorState').style.display = 'block';
+        }
+
+        // 切换播放状态
+        function togglePlay() {
+            const audioPlayer = document.getElementById('audioPlayer');
+            
+            if (audioPlayer.paused) {
+                audioPlayer.play();
+            } else {
+                audioPlayer.pause();
+            }
+        }
+
+        // 下载音频
+        function downloadAudio() {
+            const audioPlayer = document.getElementById('audioPlayer');
+            const audioUrl = audioPlayer.src;
+            
+            if (audioUrl) {
+                const link = document.createElement('a');
+                link.href = audioUrl;
+                link.download = document.getElementById('songTitle').textContent + '.mp3';
+                link.click();
+            }
+        }
+
+        // 页面加载完成后初始化
+        window.addEventListener('load', loadAudio);
+
+        // 示例URL格式：
+        // player.html?id=song001
+        // player.html?url=https://audio-qr-1361719303.cos.ap-chengdu.myqcloud.com/song.mp3
+    </script>
+</body>
+</html> 

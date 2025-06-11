@@ -1,0 +1,4 @@
+cos-python-sdk-v5==1.9.24
+qrcode[pil]==7.4.2
+Pillow==10.1.0
+requests==2.31.0

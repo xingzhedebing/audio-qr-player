@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音频播放器</title>
+</head>
+<body>
+    <script>
+        // 如果有URL参数，直接跳转到播放页面
+        if (window.location.search) {
+            window.location.href = './wechat_player.html' + window.location.search;
+        } else {
+            // 否则显示说明
+            document.body.innerHTML = `
+                <div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;">
+                    <h1>🎵 音频播放器</h1>
+                    <p>请通过二维码扫描访问音频播放页面</p>
+                    <p>或直接访问: <a href="./wechat_player.html">播放器页面</a></p>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html> 

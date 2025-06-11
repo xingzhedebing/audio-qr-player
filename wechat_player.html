@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="format-detection" content="telephone=no">
+    <title>音频播放</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', STHeiti, 'Microsoft Yahei', Tahoma, Simsun, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .player-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 30px;
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .player-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4, #feca57);
+            animation: rainbow 3s linear infinite;
+        }
+
+        @keyframes rainbow {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .music-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .song-info {
+            margin-bottom: 30px;
+        }
+
+        .song-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 8px;
+            word-break: break-all;
+        }
+
+        .song-subtitle {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+
+        .audio-container {
+            margin: 25px 0;
+            position: relative;
+        }
+
+        .audio-player {
+            width: 100%;
+            height: 50px;
+            border-radius: 25px;
+            background: #f8f9fa;
+            outline: none;
+        }
+
+        .audio-player::-webkit-media-controls-panel {
+            background-color: #f8f9fa;
+            border-radius: 25px;
+        }
+
+        .play-button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 15px 0;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .play-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .download-section {
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .download-button {
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 12px 25px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .download-button:hover {
+            background: #219a52;
+            transform: translateY(-1px);
+        }
+
+        .tips {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(52, 152, 219, 0.1);
+            border-radius: 10px;
+            color: #3498db;
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            color: #7f8c8d;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #ff6b6b;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        /* 微信特殊适配 */
+        @media screen and (max-width: 414px) {
+            body {
+                padding: 10px;
+            }
+            
+            .player-card {
+                padding: 20px;
+                border-radius: 15px;
+            }
+            
+            .music-icon {
+                font-size: 3rem;
+            }
+            
+            .song-title {
+                font-size: 1.1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="player-card">
+        <!-- 加载状态 -->
+        <div id="loadingState" class="loading">
+            <div class="spinner"></div>
+            <span>正在加载音频...</span>
+        </div>
+
+        <!-- 错误状态 -->
+        <div id="errorState" class="error" style="display: none;">
+            <strong>加载失败！</strong><br>
+            <span id="errorMessage">音频文件无法访问</span>
+        </div>
+
+        <!-- 播放器主体 -->
+        <div id="playerContent" style="display: none;">
+            <div class="music-icon">🎵</div>
+            
+            <div class="song-info">
+                <div class="song-title" id="songTitle">音频文件</div>
+                <div class="song-subtitle">点击下方播放按钮开始播放</div>
+            </div>
+
+            <div class="audio-container">
+                <audio id="audioPlayer" class="audio-player" controls preload="auto" controlslist="nodownload">
+                    <source id="audioSource" type="audio/mpeg">
+                    您的浏览器不支持音频播放功能
+                </audio>
+            </div>
+
+            <button id="playButton" class="play-button" onclick="togglePlay()">
+                <span id="playIcon">▶️</span>
+                <span id="playText">点击播放</span>
+            </button>
+
+            <div class="download-section">
+                <button class="download-button" onclick="downloadAudio()">
+                    📥 下载音频
+                </button>
+                
+                <div class="tips">
+                    💡 提示：在微信中播放音频时，建议佩戴耳机以获得更好的音质体验
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let audioPlayer = null;
+        let audioUrl = '';
+        let fileName = '';
+
+        // 获取URL参数
+        function getUrlParam(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+
+        // 解析文件名
+        function parseFileName(url) {
+            try {
+                const path = decodeURIComponent(url);
+                const parts = path.split('/');
+                const fullFileName = parts[parts.length - 1];
+                
+                // 移除扩展名
+                const nameWithoutExt = fullFileName.replace(/\.[^/.]+$/, "");
+                
+                // 处理特殊字符和编码
+                return nameWithoutExt || '音频文件';
+            } catch (e) {
+                return '音频文件';
+            }
+        }
+
+        // 初始化播放器
+        function initPlayer() {
+            // 获取音频URL
+            audioUrl = getUrlParam('url');
+            
+            if (!audioUrl) {
+                showError('缺少音频文件参数');
+                return;
+            }
+
+            // 解析文件名
+            fileName = parseFileName(audioUrl);
+            document.getElementById('songTitle').textContent = fileName;
+            document.title = fileName + ' - 音频播放';
+
+            // 设置音频源
+            audioPlayer = document.getElementById('audioPlayer');
+            document.getElementById('audioSource').src = audioUrl;
+            audioPlayer.load();
+
+            // 监听事件
+            audioPlayer.addEventListener('loadeddata', onAudioLoaded);
+            audioPlayer.addEventListener('error', onAudioError);
+            audioPlayer.addEventListener('play', onPlay);
+            audioPlayer.addEventListener('pause', onPause);
+            audioPlayer.addEventListener('ended', onEnded);
+
+            // 尝试预加载
+            audioPlayer.load();
+        }
+
+        // 音频加载完成
+        function onAudioLoaded() {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('playerContent').style.display = 'block';
+            
+            // 在微信中尝试自动播放（通常会被阻止）
+            setTimeout(() => {
+                audioPlayer.play().catch(() => {
+                    console.log('自动播放被阻止，需要用户手动播放');
+                });
+            }, 500);
+        }
+
+        // 音频加载错误
+        function onAudioError() {
+            showError('音频文件加载失败，请检查文件是否存在或网络连接');
+        }
+
+        // 播放开始
+        function onPlay() {
+            document.getElementById('playIcon').textContent = '⏸️';
+            document.getElementById('playText').textContent = '暂停';
+        }
+
+        // 播放暂停
+        function onPause() {
+            document.getElementById('playIcon').textContent = '▶️';
+            document.getElementById('playText').textContent = '播放';
+        }
+
+        // 播放结束
+        function onEnded() {
+            document.getElementById('playIcon').textContent = '🔄';
+            document.getElementById('playText').textContent = '重新播放';
+        }
+
+        // 显示错误
+        function showError(message) {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('playerContent').style.display = 'none';
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('errorState').style.display = 'block';
+        }
+
+        // 切换播放状态
+        function togglePlay() {
+            if (!audioPlayer) return;
+
+            if (audioPlayer.paused || audioPlayer.ended) {
+                audioPlayer.play().catch(e => {
+                    console.log('播放失败:', e);
+                    alert('播放失败，请尝试刷新页面');
+                });
+            } else {
+                audioPlayer.pause();
+            }
+        }
+
+        // 下载音频
+        function downloadAudio() {
+            if (!audioUrl) {
+                alert('音频文件不可用');
+                return;
+            }
+
+            try {
+                const link = document.createElement('a');
+                link.href = audioUrl;
+                link.download = fileName + '.mp3';
+                link.target = '_blank';
+                
+                // 在微信中，需要用户手动点击
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } catch (e) {
+                // 如果下载失败，直接打开链接
+                window.open(audioUrl, '_blank');
+            }
+        }
+
+        // 页面加载完成后初始化
+        window.addEventListener('DOMContentLoaded', initPlayer);
+
+        // 防止页面被缓存
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted) {
+                window.location.reload();
+            }
+        });
+    </script>
+</body>
+</html> 
