@@ -184,6 +184,18 @@
             margin-bottom: 20px;
         }
 
+        .debug-info {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+            font-size: 0.8rem;
+            color: #666;
+            text-align: left;
+            word-break: break-all;
+        }
+
         /* 微信特殊适配 */
         @media screen and (max-width: 414px) {
             body {
@@ -217,6 +229,10 @@
         <div id="errorState" class="error" style="display: none;">
             <strong>加载失败！</strong><br>
             <span id="errorMessage">音频文件无法访问</span>
+            <div id="debugInfo" class="debug-info" style="display: none;">
+                <strong>调试信息：</strong><br>
+                <div id="debugDetails"></div>
+            </div>
         </div>
 
         <!-- 播放器主体 -->
@@ -256,6 +272,7 @@
         let audioPlayer = null;
         let audioUrl = '';
         let fileName = '';
+        let loadTimeout = null;
 
         // 获取URL参数
         function getUrlParam(name) {
@@ -280,6 +297,12 @@
             }
         }
 
+        // 显示调试信息
+        function showDebugInfo(info) {
+            document.getElementById('debugDetails').innerHTML = info;
+            document.getElementById('debugInfo').style.display = 'block';
+        }
+
         // 初始化播放器
         function initPlayer() {
             // 获取音频URL
@@ -290,6 +313,9 @@
                 return;
             }
 
+            // 不要解码URL，因为URL已经被正确编码，浏览器会自动处理
+            // 保持URL的原始编码状态
+
             // 解析文件名
             fileName = parseFileName(audioUrl);
             document.getElementById('songTitle').textContent = fileName;
@@ -298,7 +324,6 @@
             // 设置音频源
             audioPlayer = document.getElementById('audioPlayer');
             document.getElementById('audioSource').src = audioUrl;
-            audioPlayer.load();
 
             // 监听事件
             audioPlayer.addEventListener('loadeddata', onAudioLoaded);
@@ -306,13 +331,48 @@
             audioPlayer.addEventListener('play', onPlay);
             audioPlayer.addEventListener('pause', onPause);
             audioPlayer.addEventListener('ended', onEnded);
+            audioPlayer.addEventListener('loadstart', function() {
+                console.log('开始加载音频');
+            });
+            audioPlayer.addEventListener('canplay', function() {
+                console.log('音频可以播放');
+                clearTimeout(loadTimeout);
+                onAudioLoaded();
+            });
+
+            // 设置超时检测
+            loadTimeout = setTimeout(() => {
+                if (document.getElementById('loadingState').style.display !== 'none') {
+                    showError('音频加载超时，请检查网络连接或文件是否存在');
+                    showDebugInfo(`音频URL: ${audioUrl}<br>文件名: ${fileName}<br>超时时间: 10秒`);
+                }
+            }, 10000);
 
             // 尝试预加载
             audioPlayer.load();
+
+            // 测试URL是否可访问
+            testUrlAccess(audioUrl);
+        }
+
+        // 测试URL访问（移除CORS检测，改为检测audio元素加载状态）
+        function testUrlAccess(url) {
+            console.log('跳过CORS检测，等待audio元素加载结果');
+            // 设置一个较长的超时，等待audio元素自然加载
+            setTimeout(() => {
+                if (document.getElementById('loadingState').style.display !== 'none') {
+                    // 如果audio还没有加载成功，检查audio的readyState
+                    if (audioPlayer.readyState === 0) {
+                        showError('音频文件无法访问 - CORS配置问题');
+                        showDebugInfo(`URL: ${url}<br>可能原因: 服务器未配置CORS跨域访问<br>解决方案: 在腾讯云COS控制台配置CORS规则`);
+                    }
+                }
+            }, 5000); // 等待5秒
         }
 
         // 音频加载完成
         function onAudioLoaded() {
+            clearTimeout(loadTimeout);
             document.getElementById('loadingState').style.display = 'none';
             document.getElementById('playerContent').style.display = 'block';
             
@@ -326,7 +386,38 @@
 
         // 音频加载错误
         function onAudioError() {
-            showError('音频文件加载失败，请检查文件是否存在或网络连接');
+            clearTimeout(loadTimeout);
+            const error = audioPlayer.error;
+            let errorMsg = '音频文件加载失败';
+            let debugMsg = `URL: ${audioUrl}<br>文件名: ${fileName}`;
+            
+            if (error) {
+                switch (error.code) {
+                    case error.MEDIA_ERR_ABORTED:
+                        errorMsg += '：播放被中断';
+                        debugMsg += '<br>错误代码: MEDIA_ERR_ABORTED';
+                        break;
+                    case error.MEDIA_ERR_NETWORK:
+                        errorMsg += '：网络错误';
+                        debugMsg += '<br>错误代码: MEDIA_ERR_NETWORK';
+                        break;
+                    case error.MEDIA_ERR_DECODE:
+                        errorMsg += '：音频解码失败';
+                        debugMsg += '<br>错误代码: MEDIA_ERR_DECODE';
+                        break;
+                    case error.MEDIA_ERR_SRC_NOT_SUPPORTED:
+                        errorMsg += '：音频格式不支持';
+                        debugMsg += '<br>错误代码: MEDIA_ERR_SRC_NOT_SUPPORTED';
+                        break;
+                    default:
+                        errorMsg += '：未知错误';
+                        debugMsg += '<br>错误代码: ' + error.code;
+                        break;
+                }
+            }
+            
+            showError(errorMsg);
+            showDebugInfo(debugMsg);
         }
 
         // 播放开始
@@ -349,6 +440,7 @@
 
         // 显示错误
         function showError(message) {
+            clearTimeout(loadTimeout);
             document.getElementById('loadingState').style.display = 'none';
             document.getElementById('playerContent').style.display = 'none';
             document.getElementById('errorMessage').textContent = message;
