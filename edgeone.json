@@ -1,0 +1,45 @@
+{
+  "name": "audio-qr-player",
+  "build": {
+    "command": "",
+    "outputDirectory": ".",
+    "installCommand": ""
+  },
+  "routes": [
+    {
+      "src": "/wechat_player.html",
+      "headers": {
+        "Cache-Control": "public, max-age=3600",
+        "X-Content-Type-Options": "nosniff"
+      }
+    },
+    {
+      "src": "/index.html",
+      "headers": {
+        "Cache-Control": "public, max-age=3600"
+      }
+    }
+  ],
+  "headers": [
+    {
+      "source": "**/*.html",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        }
+      ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/index.html",
+      "permanent": false
+    }
+  ]
+} 
